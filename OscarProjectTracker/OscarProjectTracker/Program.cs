@@ -2,13 +2,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 class Program
 {
-    static List<Hobby> hobbies = new List<Hobby>();
+    static List<Hobby> hobbies = DataStore.Load();
 
     static void Main()
     {
+        // Check reminders on startup
+        CheckReminders();
+
         bool running = true;
 
         while (running)
@@ -18,7 +22,10 @@ class Program
             Console.WriteLine("2. Manage Projects");
             Console.WriteLine("3. Add Progress Notes");
             Console.WriteLine("4. View All Hobbies & Projects");
-            Console.WriteLine("5. Exit");
+            Console.WriteLine("5. Add Resource to Project");
+            Console.WriteLine("6. View Dashboard");
+            Console.WriteLine("7. Set Reminder");
+            Console.WriteLine("8. Exit");
             Console.Write("Choose an option: ");
 
             string choice = Console.ReadLine();
@@ -28,18 +35,35 @@ class Program
                 case "1":
                     AddHobby();
                     break;
+
                 case "2":
                     ManageProjects();
                     break;
+
                 case "3":
                     AddProgressNotes();
                     break;
+
                 case "4":
                     ViewAll();
                     break;
+
                 case "5":
+                    AddResource();
+                    break;
+
+                case "6":
+                    ShowDashboard();
+                    break;
+
+                case "7":
+                    SetReminder();
+                    break;
+
+                case "8":
                     running = false;
                     break;
+
                 default:
                     Console.WriteLine("Invalid option.");
                     break;
@@ -55,12 +79,20 @@ class Program
         Console.Write("Enter hobby name: ");
         string name = Console.ReadLine();
 
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Console.WriteLine("Hobby name cannot be empty.");
+            return;
+        }
+
         hobbies.Add(new Hobby(name));
+        DataStore.Save(hobbies);
+
         Console.WriteLine("Hobby added!");
     }
 
     // -----------------------------
-    // FR-1.2: Create/Edit/Delete Projects
+    // FR-1.2: Manage Projects
     // -----------------------------
     static void ManageProjects()
     {
@@ -79,7 +111,17 @@ class Program
         {
             case "1":
                 Console.Write("Enter project name: ");
-                hobby.Projects.Add(new Project(Console.ReadLine()));
+                string name = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    Console.WriteLine("Project name cannot be empty.");
+                    return;
+                }
+
+                hobby.Projects.Add(new Project(name));
+                DataStore.Save(hobbies);
+
                 Console.WriteLine("Project added!");
                 break;
 
@@ -89,6 +131,9 @@ class Program
 
                 Console.Write("Enter new project name: ");
                 pEdit.Name = Console.ReadLine();
+                pEdit.LastUpdated = DateTime.Now;
+
+                DataStore.Save(hobbies);
                 Console.WriteLine("Project updated!");
                 break;
 
@@ -97,6 +142,8 @@ class Program
                 if (pDelete == null) return;
 
                 hobby.Projects.Remove(pDelete);
+                DataStore.Save(hobbies);
+
                 Console.WriteLine("Project deleted!");
                 break;
 
@@ -108,6 +155,7 @@ class Program
 
     // -----------------------------
     // FR-2.1: Add Progress Notes
+    // FR-2.2: Show most recent update
     // -----------------------------
     static void AddProgressNotes()
     {
@@ -121,7 +169,83 @@ class Program
         string note = Console.ReadLine();
 
         project.ProgressNotes.Add(note);
+        project.LastUpdated = DateTime.Now;
+
+        DataStore.Save(hobbies);
         Console.WriteLine("Progress note added!");
+    }
+
+    // -----------------------------
+    // FR-3.1: Add Resource to Project
+    // -----------------------------
+    static void AddResource()
+    {
+        Hobby hobby = SelectHobby();
+        if (hobby == null) return;
+
+        Project project = SelectProject(hobby);
+        if (project == null) return;
+
+        Console.Write("Enter resource label: ");
+        string label = Console.ReadLine();
+
+        Console.Write("Enter URL or file path: ");
+        string url = Console.ReadLine();
+
+        project.Resources.Add(new Resource(label, url));
+        project.LastUpdated = DateTime.Now;
+
+        DataStore.Save(hobbies);
+        Console.WriteLine("Resource added!");
+    }
+
+    // -----------------------------
+    // FR-4.1: Dashboard
+    // -----------------------------
+    static void ShowDashboard()
+    {
+        Dashboard.Show(hobbies);
+    }
+
+    // -----------------------------
+    // FR-5.1: Set Reminder
+    // -----------------------------
+    static void SetReminder()
+    {
+        Hobby hobby = SelectHobby();
+        if (hobby == null) return;
+
+        Project project = SelectProject(hobby);
+        if (project == null) return;
+
+        Console.Write("Enter reminder message: ");
+        string msg = Console.ReadLine();
+
+        Console.Write("Enter due date (YYYY-MM-DD): ");
+        DateTime due = DateTime.Parse(Console.ReadLine());
+
+        project.Reminder = new Reminder(due, msg);
+        DataStore.Save(hobbies);
+
+        Console.WriteLine("Reminder set!");
+    }
+
+    // -----------------------------
+    // Reminder check on startup
+    // -----------------------------
+    static void CheckReminders()
+    {
+        foreach (var hobby in hobbies)
+        {
+            foreach (var project in hobby.Projects)
+            {
+                if (project.Reminder != null &&
+                    project.Reminder.DueDate <= DateTime.Now)
+                {
+                    Console.WriteLine($"\n⚠ REMINDER: {project.Name} — {project.Reminder.Message}");
+                }
+            }
+        }
     }
 
     // -----------------------------
@@ -149,17 +273,21 @@ class Program
             {
                 Console.WriteLine($"  Project: {project.Name}");
 
-                if (project.ProgressNotes.Count == 0)
+                if (project.ProgressNotes.Count > 0)
                 {
-                    Console.WriteLine("    No progress notes.");
+                    Console.WriteLine($"    Most Recent: {project.ProgressNotes.Last()}");
                 }
-                else
+
+                if (project.Resources.Count > 0)
                 {
-                    Console.WriteLine("    Progress Notes:");
-                    foreach (var note in project.ProgressNotes)
-                    {
-                        Console.WriteLine($"     - {note}");
-                    }
+                    Console.WriteLine("    Resources:");
+                    foreach (var r in project.Resources)
+                        Console.WriteLine($"     - {r}");
+                }
+
+                if (project.Reminder != null)
+                {
+                    Console.WriteLine($"    Reminder: {project.Reminder}");
                 }
             }
         }

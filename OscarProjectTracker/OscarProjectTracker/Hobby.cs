@@ -2,14 +2,15 @@ namespace OscarProjectTracker;
 
 using System.Collections.Generic;
 
-class Hobby
+public class Hobby
 {
     public string Name { get; set; }
-    public List<Project> Projects { get; set; }
+    public List<Project> Projects { get; set; } = new();
 
     public Hobby(string name)
     {
         Name = name;
-        Projects = new List<Project>();
     }
+
+    public override string ToString() => Name;
 }
