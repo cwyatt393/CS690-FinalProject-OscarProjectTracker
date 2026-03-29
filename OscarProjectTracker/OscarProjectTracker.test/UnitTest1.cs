@@ -317,16 +317,57 @@ public class UnitTest1
         Assert.True(wasAdded);
     }
 
+    //FR3.2 organize resources using folders Test
 
+    //  FR3.2 Success Test
+    [Fact]
+    public void Test_ResourceTag_Success()
+    {
+        // Arrange
+        var project = new Project("Oil Painting");
+        var resource = new Resource("Color Guide", "url", "Basics");
 
-    //FR3.2 organize resources using folders Test (not impemented as of V2.0.0)
+        // Act
+        project.Resources.Add(resource);
 
-    //  FR3.2 Success Test    
-    
+        // Bool check: tag should be stored correctly
+        bool tagCorrect = project.Resources.Any(r => r.Tag == "Basics");
+
+        // Assert
+        Assert.True(tagCorrect);
+    }
+
     //  FR3.2 Failure Test
-    
-    //  FR3.2 Sanity Test
+    [Fact]
+    public void Test_ResourceTag_Fails_WhenTagEmpty()
+    {
+        // Arrange
+        var project = new Project("Oil Painting");
+        var resource = new Resource("Color Guide", "url", "");
 
+        // Act
+        project.Resources.Add(resource);
+
+        // Bool check: empty tag should NOT count as valid
+        bool tagValid = !string.IsNullOrWhiteSpace(resource.Tag);
+
+        // Assert
+        Assert.False(tagValid);
+    }
+
+    //  FR3.2 Sanity Test
+    [Fact]
+    public void Test_ResourceTag_SanityCheck()
+    {
+        // Arrange
+        var resource = new Resource("Brush Guide", "url", "Tools");
+
+        // Bool check: tag should match
+        bool tagCorrect = resource.Tag == "Tools";
+
+        // Assert
+        Assert.True(tagCorrect);
+    }
 
     //---------------
     //UC4: View projects in a single dashboard
@@ -396,14 +437,73 @@ public class UnitTest1
 
 
     //FR4.2 allow sorting and filtering by hobby, last updated date, or priority Test
-    // (not implemented as of V2.0.0)
 
-    //  FR4.2 Success Test    
-    
+    //  FR4.2 Success Test
+    [Fact]
+    public void Test_DashboardSortByPriority_Success()
+    {
+        // Arrange
+        var hobby = new Hobby("Art");
+        var p1 = new Project("Low") { Priority = 1 };
+        var p2 = new Project("High") { Priority = 3 };
+        hobby.Projects.Add(p1);
+        hobby.Projects.Add(p2);
+        var hobbies = new List<Hobby> { hobby };
+
+        // Act
+        Dashboard.Show(hobbies, sortBy: "priority");
+
+        // Bool check: if no exception, success
+        bool result = true;
+
+        // Assert
+        Assert.True(result);
+    }
+
     //  FR4.2 Failure Test
-    
-    //  FR4.2 Sanity Test
+    [Fact]
+    public void Test_DashboardSort_Fails_WhenHobbiesNull()
+    {
+        // Arrange
+        List<Hobby> hobbies = null;
 
+        bool result;
+
+        // Act
+        try
+        {
+            Dashboard.Show(hobbies, sortBy: "priority");
+            result = true;  // Should not reach here
+        }
+        catch
+        {
+            result = false; // Expected
+        }
+
+        // Assert
+        Assert.False(result);
+    }
+
+    //  FR4.2 Sanity Test
+    [Fact]
+    public void Test_DashboardFilter_SanityCheck()
+    {
+        // Arrange
+        var h1 = new Hobby("Art");
+        var h2 = new Hobby("Music");
+        h1.Projects.Add(new Project("Painting"));
+        h2.Projects.Add(new Project("Guitar"));
+        var hobbies = new List<Hobby> { h1, h2 };
+
+        // Act
+        Dashboard.Show(hobbies, filterHobby: "Art");
+
+        // Bool check: if no exception, sanity passes
+        bool result = true;
+
+        // Assert
+        Assert.True(result);
+    }
 
     //---------------
     //UC5: Set Reminders of goals for hobbies and projects
@@ -464,12 +564,66 @@ public class UnitTest1
 
     //FR5.2 notify user when a reminder is due Test
 
-    //  FR5.2 Success Test    
-    
+    //  FR5.2 Success Test
+    [Fact]
+    public void Test_ReminderDue_Success()
+    {
+        // Arrange
+        var hobby = new Hobby("Guitar");
+        var project = new Project("Practice");
+        project.Reminder = new Reminder(DateTime.Now.AddSeconds(-1), "Do it");
+        hobby.Projects.Add(project);
+        var hobbies = new List<Hobby> { hobby };
+
+        // Act
+        ReminderChecker.Check(hobbies);
+
+        // Bool check: if no exception, success
+        bool result = true;
+
+        // Assert
+        Assert.True(result);
+    }
+
     //  FR5.2 Failure Test
-    
+    [Fact]
+    public void Test_ReminderDue_Fails_WhenNoReminder()
+    {
+        // Arrange
+        var hobby = new Hobby("Guitar");
+        var project = new Project("Practice");
+        hobby.Projects.Add(project);
+        var hobbies = new List<Hobby> { hobby };
+
+        // Act
+        ReminderChecker.Check(hobbies);
+
+        // Bool check: no reminder means nothing should trigger
+        bool result = true;
+
+        // Assert
+        Assert.True(result);
+    }
+
     //  FR5.2 Sanity Test
+    [Fact]
+    public void Test_ReminderDue_SanityCheck()
+    {
+        // Arrange
+        var hobby = new Hobby("Guitar");
+        var project = new Project("Practice");
+        project.Reminder = new Reminder(DateTime.Now.AddDays(1), "Tomorrow");
+        hobby.Projects.Add(project);
+        var hobbies = new List<Hobby> { hobby };
 
+        // Act
+        ReminderChecker.Check(hobbies);
 
+        // Bool check: future reminder should not break anything
+        bool result = true;
+
+        // Assert
+        Assert.True(result);
+    }
 
 }

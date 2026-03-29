@@ -17,7 +17,8 @@ class Program
 
         while (running)
         {
-            Console.WriteLine("\n=== Hobby Tracker ===");
+            ReminderChecker.Check(hobbies);
+
             Console.WriteLine("1. Add Hobby");
             Console.WriteLine("2. Manage Projects");
             Console.WriteLine("3. Add Progress Notes");
@@ -25,7 +26,8 @@ class Program
             Console.WriteLine("5. Add Resource to Project");
             Console.WriteLine("6. View Dashboard");
             Console.WriteLine("7. Set Reminder");
-            Console.WriteLine("8. Exit");
+            Console.WriteLine("8. View Resources by Tag");   // NEW
+            Console.WriteLine("9. Exit");
             Console.Write("Choose an option: ");
 
             string choice = Console.ReadLine();
@@ -61,6 +63,10 @@ class Program
                     break;
 
                 case "8":
+                    ViewResourcesByTag();
+                    break;
+
+                case "9":
                     running = false;
                     break;
 
@@ -103,8 +109,8 @@ class Program
         Console.WriteLine("1. Add Project");
         Console.WriteLine("2. Edit Project");
         Console.WriteLine("3. Delete Project");
+        Console.WriteLine("4. Set Project Priority");
         Console.Write("Choose an option: ");
-
         string choice = Console.ReadLine();
 
         switch (choice)
@@ -147,6 +153,28 @@ class Program
                 Console.WriteLine("Project deleted!");
                 break;
 
+            case "4":
+                Project pPriority = SelectProject(hobby);
+                if (pPriority == null) return;
+
+                Console.WriteLine("Set priority: 1 = Low, 2 = Medium, 3 = High");
+                Console.Write("Enter priority (1-3): ");
+                string priorityInput = Console.ReadLine();
+
+                if (int.TryParse(priorityInput, out int priority) &&
+                    priority >= 1 && priority <= 3)
+                {
+                    pPriority.Priority = priority;
+                    pPriority.LastUpdated = DateTime.Now;
+                    DataStore.Save(hobbies);
+                    Console.WriteLine("Priority updated!");
+                }
+                else
+                {
+                    Console.WriteLine("Invalid priority.");
+                }
+                break;
+
             default:
                 Console.WriteLine("Invalid option.");
                 break;
@@ -177,7 +205,9 @@ class Program
 
     // -----------------------------
     // FR-3.1: Add Resource to Project
+    // FR-3.2: Organize Resources with Tags
     // -----------------------------
+
     static void AddResource()
     {
         Hobby hobby = SelectHobby();
@@ -192,19 +222,94 @@ class Program
         Console.Write("Enter URL or file path: ");
         string url = Console.ReadLine();
 
-        project.Resources.Add(new Resource(label, url));
+        Console.Write("Enter a tag/folder name (optional): ");
+        string tag = Console.ReadLine();
+
+        project.Resources.Add(new Resource(label, url, tag));
         project.LastUpdated = DateTime.Now;
 
         DataStore.Save(hobbies);
         Console.WriteLine("Resource added!");
     }
 
+    // ViewResourceByTag
+    static void ViewResourcesByTag()
+    {
+        Console.Write("Enter tag/folder name to search: ");
+        string tag = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            Console.WriteLine("Tag cannot be empty.");
+            return;
+        }
+
+        var matches = new List<(Hobby Hobby, Project Project, Resource Resource)>();
+
+        foreach (var hobby in hobbies)
+        {
+            foreach (var project in hobby.Projects)
+            {
+                foreach (var resource in project.Resources)
+                {
+                    if (!string.IsNullOrWhiteSpace(resource.Tag) &&
+                        resource.Tag.Equals(tag, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matches.Add((hobby, project, resource));
+                    }
+                }
+            }
+        }
+
+        if (matches.Count == 0)
+        {
+            Console.WriteLine($"No resources found with tag '{tag}'.");
+            return;
+        }
+
+        Console.WriteLine($"\nResources with tag '{tag}':");
+        foreach (var match in matches)
+        {
+            Console.WriteLine($"[{match.Hobby.Name}] {match.Project.Name} -> {match.Resource}");
+        }
+    }
+
+
     // -----------------------------
     // FR-4.1: Dashboard
+    // FR-4.2: Sorting/Filtering Dashboard
     // -----------------------------
+
     static void ShowDashboard()
     {
-        Dashboard.Show(hobbies);
+        Console.WriteLine("\nDashboard Options:");
+        Console.WriteLine("1. Sort by Last Updated");
+        Console.WriteLine("2. Sort by Priority");
+        Console.WriteLine("3. Filter by Hobby");
+        Console.Write("Choose an option: ");
+
+        string choice = Console.ReadLine();
+
+        switch (choice)
+        {
+            case "1":
+                Dashboard.Show(hobbies, sortBy: "lastUpdated");
+                break;
+
+            case "2":
+                Dashboard.Show(hobbies, sortBy: "priority");
+                break;
+
+            case "3":
+                Console.Write("Enter hobby name to filter: ");
+                string hobbyName = Console.ReadLine();
+                Dashboard.Show(hobbies, filterHobby: hobbyName);
+                break;
+
+            default:
+                Console.WriteLine("Invalid option.");
+                break;
+        }
     }
 
     // -----------------------------
@@ -231,7 +336,7 @@ class Program
     }
 
     // -----------------------------
-    // Reminder check on startup
+    // FR-5.2: Notify When Reminder is Due
     // -----------------------------
     static void CheckReminders()
     {
@@ -271,7 +376,7 @@ class Program
 
             foreach (var project in hobby.Projects)
             {
-                Console.WriteLine($"  Project: {project.Name}");
+                Console.WriteLine($"  Project: {project.Name} (Priority {project.Priority})");
 
                 if (project.ProgressNotes.Count > 0)
                 {
