@@ -1,2 +1,4 @@
 <Solution>
+  <Project Path="OscarProjectTracker.test/OscarProjectTracker.test.csproj" />
+  <Project Path="OscarProjectTracker/OscarProjectTracker.csproj" />
 </Solution>
